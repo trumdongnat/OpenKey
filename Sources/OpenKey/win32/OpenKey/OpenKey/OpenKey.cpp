@@ -13,6 +13,8 @@ redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "stdafx.h"
 #include "AppDelegate.h"
+#include "BlacklistDialog.h"
+#include "SystemTrayHelper.h"
 
 #pragma comment(lib, "imm32")
 #define IMC_GETOPENSTATUS 0x0005
@@ -110,6 +112,7 @@ void OpenKeyInit() {
 	APP_GET_DATA(vOtherLanguage, 1);
 	APP_GET_DATA(vTempOffOpenKey, 0);
 	APP_GET_DATA(vFixChromiumBrowser, 0);
+	APP_GET_DATA(vUseBlacklistApps, 0);
 
 	//init convert tool
 	APP_GET_DATA(convertToolDontAlertWhenCompleted, 0);
@@ -161,6 +164,9 @@ void OpenKeyInit() {
 	DWORD smartSwitchKeySize;
 	BYTE* data = OpenKeyHelper::getRegBinary(_T("smartSwitchKey"), smartSwitchKeySize);
 	initSmartSwitchKey((Byte*)data, (int)smartSwitchKeySize);
+
+	//Load blacklist applications
+	BlacklistDialog::loadBlacklistApps();
 
 	//init hook
 	HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -399,6 +405,22 @@ bool checkHotKey(int hotKeyData, bool checkKeyCode = true) {
 }
 
 void switchLanguage() {
+	// Check if current app is blacklisted and user is trying to switch to Vietnamese
+	if (vUseBlacklistApps && vLanguage == 0) { // Currently in English mode
+		string& exe = OpenKeyHelper::getFrontMostAppExecuteName();
+		if (BlacklistDialog::isAppBlacklisted(exe)) {
+			// Show balloon notification that switching to Vietnamese is not allowed
+			TCHAR title[256];
+			TCHAR message[512];
+			LoadString(GetModuleHandle(NULL), IDS_BLACKLIST_NOTIFICATION_TITLE, title, sizeof(title) / sizeof(TCHAR)); // IDS_BLACKLIST_NOTIFICATION_TITLE
+			LoadString(GetModuleHandle(NULL), IDS_BLACKLIST_SWITCH_BLOCKED_MSG, message, sizeof(message) / sizeof(TCHAR)); // Switch blocked message
+			
+			// Use balloon notification instead of MessageBox
+			SystemTrayHelper::showBalloonNotification(title, message, NIIF_WARNING);
+			return; // Don't switch language
+		}
+	}
+	
 	if (vLanguage == 0)
 		vLanguage = 1;
 	else
@@ -673,10 +695,21 @@ LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 
 VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
 	//smart switch key
-	if (vUseSmartSwitchKey || vRememberCode) {
+	if (vUseSmartSwitchKey || vRememberCode || vUseBlacklistApps) {
 		string& exe = OpenKeyHelper::getFrontMostAppExecuteName();
 		if (exe.compare("explorer.exe") == 0) //dont apply with windows explorer
 			return;
+		
+		// Check blacklist first (higher priority than smart switch)
+		if (vUseBlacklistApps && BlacklistDialog::isAppBlacklisted(exe)) {
+			if (vLanguage != 0) {
+				vLanguage = 0; // Switch to English mode
+				AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+			}
+			startNewSession();
+			return;
+		}
+		
 		_languageTemp = getAppInputMethodStatus(exe, vLanguage | (vCodeTable << 1));
 		vTempOffEngine(false);
 		if (vUseSmartSwitchKey && (_languageTemp & 0x01) != vLanguage) {

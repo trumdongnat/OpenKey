@@ -108,12 +108,12 @@ BEGIN
     PUSHBUTTON      "Kiểm tra bản mới...",IDC_BUTTON_CHECK_VERSION,44,117,75,14
 END
 
-IDD_DIALOG_MAIN DIALOGEX 0, 0, 297, 261
+IDD_DIALOG_MAIN DIALOGEX 0, 0, 297, 282
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "OpenKey 1.4 - Bộ gõ Tiếng Việt"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    PUSHBUTTON      "Cài đặt gốc",ID_BTN_DEFAULT,113,234,71,20
+    PUSHBUTTON      "Cài đặt gốc",ID_BTN_DEFAULT,113,255,71,20
     GROUPBOX        "Điều khiển",IDC_STATIC,7,7,283,73
     LTEXT           "Kiểu gõ:",IDC_STATIC,14,23,27,8
     COMBOBOX        IDC_COMBO_INPUT_TYPE,64,20,75,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
@@ -129,9 +129,9 @@ BEGIN
     LTEXT           "Chế độ gõ:",IDC_STATIC,14,60,36,8
     CONTROL         "Tiếng Việt",IDC_RADIO_METHOD_VIETNAMESE,"Button",BS_AUTORADIOBUTTON,64,59,47,10
     CONTROL         "Tiếng Anh",IDC_RADIO_METHOD_ENGLISH,"Button",BS_AUTORADIOBUTTON,158,59,48,10
-    DEFPUSHBUTTON   "Đóng",IDBUTTON_OK,200,234,71,20
-    PUSHBUTTON      "Tắt OpenKey",IDBUTTON_EXIT,26,234,71,20
-    CONTROL         "",IDC_TAB_CONTROL,"SysTabControl32",TCS_FIXEDWIDTH,7,89,283,140
+    DEFPUSHBUTTON   "Đóng",IDBUTTON_OK,200,255,71,20
+    PUSHBUTTON      "Tắt OpenKey",IDBUTTON_EXIT,26,255,71,20
+    CONTROL         "",IDC_TAB_CONTROL,"SysTabControl32",TCS_FIXEDWIDTH,7,89,283,157
 END
 
 IDD_DIALOG_MACRO DIALOGEX 0, 0, 415, 253
@@ -183,7 +183,7 @@ BEGIN
     PUSHBUTTON      "Đảo",IDC_BUTTON_CONVERT_SWITCH,124,134,36,14
 END
 
-IDD_DIALOG_TAB_GENERAL DIALOGEX 0, 0, 353, 137
+IDD_DIALOG_TAB_GENERAL DIALOGEX 0, 0, 353, 146
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
 EXSTYLE WS_EX_TRANSPARENT
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -199,16 +199,33 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,50,125,10
     CONTROL         "Tạm tắt chính tả bằng phím Ctrl",IDC_CHECK_TEMP_OFF_SPELLING,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,69,123,10
-    CONTROL         "Loại trừ ứng dụng thông minh",IDC_CHECK_SMART_SWITCH_KEY,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,69,111,10
     CONTROL         "Viết Hoa chữ cái đầu câu",IDC_CHECK_CAPS_FIRST_CHAR,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,50,95,10
     CONTROL         "Tự ghi nhớ bảng mã theo ứng dụng",IDC_CHECK_SMART_SWITCH_CODE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,88,130,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,69,130,10
     CONTROL         "Cho phép gõ trong các ngôn ngữ khác",IDC_CHECK_OTHER_LANGUAGES,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,106,204,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,88,137,10
     CONTROL         "Tạm tắt OpenKey bằng phím Alt",IDC_CHECK_TEMP_OFF_OPEN_KEY,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,88,123,10
+    CONTROL         "Loại trừ ứng dụng",IDC_CHECK_BLACKLIST_APPS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,123,75,10
+    PUSHBUTTON      "...",IDC_BUTTON_BLACKLIST_CONFIG,86,121,15,14
+    CONTROL         "Loại trừ ứng dụng thông minh",IDC_CHECK_SMART_SWITCH_KEY,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,106,111,10
+END
+
+IDD_DIALOG_BLACKLIST DIALOGEX 0, 0, 350, 250
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Loại trừ ứng dụng"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Tên file chương trình (filename.exe)",IDC_STATIC,7,7,120,8
+    COMBOBOX        IDC_COMBO_RUNNING_APPS,7,18,245,100,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "...",IDC_BUTTON_BROWSE_APP,260,18,15,14
+    PUSHBUTTON      "Chọn ch.trình",IDC_BUTTON_SELECT_APP,280,18,64,14
+    PUSHBUTTON      "Thêm",IDC_BUTTON_BLACKLIST_ADD,300,45,43,14
+    CONTROL         "",IDC_LIST_BLACKLIST_APPS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,45,286,188
+    PUSHBUTTON      "Xóa",IDC_BUTTON_BLACKLIST_REMOVE,300,65,43,14
+    DEFPUSHBUTTON   "Đóng",IDC_BUTTON_BLACKLIST_CLOSE,300,220,43,14
 END
 
 IDD_DIALOG_TAB_MACRO DIALOGEX 0, 0, 299, 177
@@ -306,7 +323,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 290
         TOPMARGIN, 7
-        BOTTOMMARGIN, 254
+        BOTTOMMARGIN, 275
     END
 
     IDD_DIALOG_MACRO, DIALOG
@@ -330,7 +347,11 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 346
         TOPMARGIN, 7
-        BOTTOMMARGIN, 130
+        BOTTOMMARGIN, 139
+    END
+
+    IDD_DIALOG_BLACKLIST, DIALOG
+    BEGIN
     END
 
     IDD_DIALOG_TAB_MACRO, DIALOG
@@ -519,11 +540,22 @@ BEGIN
                             "Thay thế nhanh các phụ âm đầu như f, j, w bằng ph, gi, qu.Ví dụ: fải→phải, jảng→giảng, wên→quên"
     IDS_STRING_END_CONSONANT 
                             "Thay thế nhanh các phụ âm cuối như g, h, k bằng ng, nh, ch.Ví dụ: trươg→trương, nhah→nhanh, bák→bách"
+    IDS_STRING_BLACKLIST_APPS 
+                            "Loại trừ các ứng dụng khỏi việc gõ tiếng Việt. Khi mở ứng dụng trong danh sách loại trừ, OpenKey sẽ tự động chuyển về chế độ gõ tiếng Anh. Phải xóa ứng dụng ra khỏi danh sách nếu muốn chuyển về chế độ gõ tiếng Việt."
 END
 
 STRINGTABLE
 BEGIN
     IDS_STRING_FIX_CHROMIUM "Sửa lỗi bị đúp từ trên các trình duyệt Chromium bao gồm Google Chrome, Brave, Microsoft Edge. Tính năng này đang được thử nghiệm. Cần bật tính năng ""Sửa lỗi gợi ý"" để hỗ trợ tính năng này."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_BLACKLIST_NOTIFICATION_TITLE "OpenKey - Loại trừ ứng dụng"
+    IDS_BLACKLIST_NOTIFICATION_MSG 
+                            "Ứng dụng này nằm trong danh sách loại trừ. Chế độ gõ Tiếng Việt đã được tắt tự động."
+    IDS_BLACKLIST_SWITCH_BLOCKED_MSG 
+                            "Không thể chuyển sang chế độ gõ Tiếng Việt!\nỨng dụng hiện tại nằm trong danh sách loại trừ."
 END
 
 #endif    // English (United States) resources
