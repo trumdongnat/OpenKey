@@ -19,14 +19,21 @@ redistribute your new version, it MUST be open source.
 #include <fstream>
 #include <sstream>
 #include <commdlg.h>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 set<string> BlacklistDialog::s_blacklistApps;
+BlacklistDialog* BlacklistDialog::s_instance = nullptr;
 
 BlacklistDialog::BlacklistDialog(const HINSTANCE& hInstance, const int& resourceId)
-    : BaseDialog(hInstance, resourceId) {
+    : BaseDialog(hInstance, resourceId), isSelectingWindow(false), originalCursor(nullptr), hOverlayWindow(nullptr) {
+    s_instance = this;
 }
 
 BlacklistDialog::~BlacklistDialog() {
+    s_instance = nullptr;
 }
 
 void BlacklistDialog::initDialog() {
@@ -34,6 +41,7 @@ void BlacklistDialog::initDialog() {
     
     hComboRunningApps = GetDlgItem(hDlg, IDC_COMBO_RUNNING_APPS);
     hButtonBrowse = GetDlgItem(hDlg, IDC_BUTTON_BROWSE_APP);
+    hButtonSelectApp = GetDlgItem(hDlg, IDC_BUTTON_SELECT_APP);
     hListBlacklist = GetDlgItem(hDlg, IDC_LIST_BLACKLIST_APPS);
     hButtonAdd = GetDlgItem(hDlg, IDC_BUTTON_BLACKLIST_ADD);
     hButtonRemove = GetDlgItem(hDlg, IDC_BUTTON_BLACKLIST_REMOVE);
@@ -250,6 +258,54 @@ void BlacklistDialog::onBrowseButton() {
     }
 }
 
+void BlacklistDialog::onSelectAppButton() {
+    startWindowSelection();
+}
+
+void BlacklistDialog::startWindowSelection() {
+    if (isSelectingWindow) return;
+    
+    isSelectingWindow = true;
+    
+    // Change cursor to crosshair
+    originalCursor = SetCursor(LoadCursor(NULL, IDC_CROSS));
+    
+    // Hide all OpenKey windows
+    hideAllOpenKeyWindows();
+    
+    // Set capture to desktop and wait for click
+    SetCapture(GetDesktopWindow());
+    
+    // Start a timer to check for mouse click
+    SetTimer(hDlg, 1, 10, NULL);
+}
+
+void BlacklistDialog::endWindowSelection() {
+    if (!isSelectingWindow) return;
+    
+    isSelectingWindow = false;
+    
+    // Kill timer
+    KillTimer(hDlg, 1);
+    
+    // Release capture
+    ReleaseCapture();
+    
+    // Restore original cursor
+    if (originalCursor) {
+        SetCursor(originalCursor);
+        originalCursor = nullptr;
+    }
+    
+    // Show all OpenKey windows
+    showAllOpenKeyWindows();
+}
+
+LRESULT CALLBACK BlacklistDialog::MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    // Simplified implementation - we'll use WM_TIMER instead
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
 void BlacklistDialog::addAppToBlacklist(const string& appName) {
     string upperAppName = appName;
     transform(upperAppName.begin(), upperAppName.end(), upperAppName.begin(), ::toupper);
@@ -283,6 +339,52 @@ INT_PTR BlacklistDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
         initDialog();
         return TRUE;
         
+    case WM_TIMER:
+        if (wParam == 1 && isSelectingWindow) {
+            // Check for left mouse button click
+            if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) {
+                POINT pt;
+                GetCursorPos(&pt);
+                
+                // Get window under cursor
+                HWND hWndUnderCursor = WindowFromPoint(pt);
+                if (hWndUnderCursor && hWndUnderCursor != hDlg) {
+                    // Get the process ID of the window
+                    DWORD processId;
+                    GetWindowThreadProcessId(hWndUnderCursor, &processId);
+                    
+                    // Get process name
+                    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
+                    if (hProcess) {
+                        TCHAR processName[MAX_PATH];
+                        DWORD size = MAX_PATH;
+                        if (QueryFullProcessImageName(hProcess, 0, processName, &size)) {
+                            // Extract filename from full path
+                            wstring fullPath = processName;
+                            size_t lastSlash = fullPath.find_last_of(L"\\");
+                            wstring fileName = (lastSlash != wstring::npos) ? fullPath.substr(lastSlash + 1) : fullPath;
+                            
+                            // Set to combo box
+                            SetWindowText(hComboRunningApps, fileName.c_str());
+                        }
+                        CloseHandle(hProcess);
+                    }
+                }
+                
+                endWindowSelection();
+                
+                // Wait for button release to avoid multiple triggers
+                while (GetAsyncKeyState(VK_LBUTTON) & 0x8000) {
+                    Sleep(10);
+                }
+            }
+            // Check for ESC key or right mouse button to cancel
+            else if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000) || (GetAsyncKeyState(VK_RBUTTON) & 0x8000)) {
+                endWindowSelection();
+            }
+        }
+        break;
+        
     case WM_COMMAND: {
         int wmId = LOWORD(wParam);
         switch (wmId) {
@@ -294,6 +396,9 @@ INT_PTR BlacklistDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
             break;
         case IDC_BUTTON_BROWSE_APP:
             onBrowseButton();
+            break;
+        case IDC_BUTTON_SELECT_APP:
+            onSelectAppButton();
             break;
         case IDC_BUTTON_BLACKLIST_CLOSE:
         case IDCANCEL:
@@ -349,4 +454,53 @@ void BlacklistDialog::loadBlacklistApps() {
         }
         file.close();
     }
+}
+
+// Helper function for EnumWindows callback
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
+    BlacklistDialog* self = reinterpret_cast<BlacklistDialog*>(lParam);
+    
+    // Check if window belongs to our process
+    DWORD processId;
+    GetWindowThreadProcessId(hwnd, &processId);
+    
+    if (processId == GetCurrentProcessId() && IsWindowVisible(hwnd)) {
+        // Check if it's a dialog or main window
+        TCHAR className[256];
+        TCHAR windowTitle[256];
+        GetClassName(hwnd, className, 256);
+        GetWindowText(hwnd, windowTitle, 256);
+        
+        // Hide OpenKey dialogs (check for common dialog class names and titles)
+        if (wcsstr(className, L"#32770") != nullptr || // Standard dialog class
+            wcsstr(windowTitle, L"OpenKey") != nullptr) {
+            
+            self->hiddenWindows.push_back(hwnd);
+            ShowWindow(hwnd, SW_HIDE);
+        }
+    }
+    
+    return TRUE; // Continue enumeration
+}
+
+void BlacklistDialog::hideAllOpenKeyWindows() {
+    hiddenWindows.clear();
+    
+    // Enumerate all top-level windows
+    EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(this));
+}
+
+void BlacklistDialog::showAllOpenKeyWindows() {
+    // Show all previously hidden windows
+    for (HWND hwnd : hiddenWindows) {
+        if (IsWindow(hwnd)) {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+    }
+    
+    // Clear the list
+    hiddenWindows.clear();
+    
+    // Set focus to this dialog
+    SetForegroundWindow(hDlg);
 }

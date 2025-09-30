@@ -199,6 +199,7 @@
 #define IDC_BUTTON_BLACKLIST_ADD         1074
 #define IDC_BUTTON_BLACKLIST_REMOVE      1075
 #define IDC_BUTTON_BLACKLIST_CLOSE       1076
+#define IDC_BUTTON_SELECT_APP            1077
 
 #define IDC_STATIC                      -1
 
@@ -209,7 +210,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        149
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1077
+#define _APS_NEXT_CONTROL_VALUE         1078
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

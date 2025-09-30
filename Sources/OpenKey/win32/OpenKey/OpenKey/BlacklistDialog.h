@@ -23,6 +23,7 @@ class BlacklistDialog : public BaseDialog {
 private:
     HWND hComboRunningApps;
     HWND hButtonBrowse;
+    HWND hButtonSelectApp;
     HWND hListBlacklist;
     HWND hButtonAdd;
     HWND hButtonRemove;
@@ -30,6 +31,14 @@ private:
     
     set<string> blacklistApps;
     vector<string> runningApps;
+    
+    // Window selection variables
+    bool isSelectingWindow;
+    HCURSOR originalCursor;
+    HWND hOverlayWindow;
+    
+public:
+    vector<HWND> hiddenWindows; // Make it public for callback access
 
 private:
     void initDialog();
@@ -40,9 +49,18 @@ private:
     void onAddButton();
     void onRemoveButton();
     void onBrowseButton();
+    void onSelectAppButton();
     void addAppToBlacklist(const string& appName);
     void removeAppFromBlacklist(const string& appName);
     string getBlacklistFilePath();
+    
+    // Window selection methods
+    void startWindowSelection();
+    void endWindowSelection();
+    void hideAllOpenKeyWindows();
+    void showAllOpenKeyWindows();
+    static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam);
+    static BlacklistDialog* s_instance;
 
 protected:
     INT_PTR eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -56,3 +74,6 @@ public:
     static void loadBlacklistApps();
     static set<string> s_blacklistApps;
 };
+
+// Forward declaration for callback
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam);
