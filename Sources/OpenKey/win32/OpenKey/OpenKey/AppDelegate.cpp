@@ -51,12 +51,14 @@ int vRunAsAdmin = 0;
 int vCheckNewVersion = 0;
 //beta feature
 int vFixChromiumBrowser = 0; //new on version 2.0
+int vUseBlacklistApps = 0; //new feature for app exclusion
 
 bool AppDelegate::isDialogMsg(MSG & msg) const {
 	return (mainDialog != NULL && IsDialogMessage(mainDialog->getHwnd(), &msg)) ||
 		(macroDialog != NULL && IsDialogMessage(macroDialog->getHwnd(), &msg)) || 
 		(convertDialog != NULL && IsDialogMessage(convertDialog->getHwnd(), &msg)) || 
-		(aboutDialog != NULL && IsDialogMessage(aboutDialog->getHwnd(), &msg));
+		(aboutDialog != NULL && IsDialogMessage(aboutDialog->getHwnd(), &msg)) ||
+		(blacklistDialog != NULL && IsDialogMessage(blacklistDialog->getHwnd(), &msg));
 }
 
 void AppDelegate::checkUpdate() {
@@ -158,6 +160,9 @@ void AppDelegate::closeDialog(BaseDialog * dialog) {
 	} else if (convertDialog == dialog) {
 		delete convertDialog;
 		convertDialog = NULL;
+	} else if (blacklistDialog == dialog) {
+		delete blacklistDialog;
+		blacklistDialog = NULL;
 	}
 }
 
@@ -303,4 +308,13 @@ void AppDelegate::onOpenKeyExit() {
 	OpenKeyManager::freeEngine();
 	SystemTrayHelper::removeSystemTray();
 	PostQuitMessage(0);
+}
+
+void AppDelegate::onBlacklistConfig() {
+	if (blacklistDialog == NULL) {
+		blacklistDialog = new BlacklistDialog(hInstance, IDD_DIALOG_BLACKLIST);
+		blacklistDialog->show();
+	} else {
+		blacklistDialog->bringOnTop();
+	}
 }

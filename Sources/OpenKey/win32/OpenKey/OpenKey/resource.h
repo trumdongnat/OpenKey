@@ -182,6 +182,24 @@
 #define IDS_STRING_START_CONSONANT      1066
 #define IDS_STRING_END_CONSONANT        1067
 #define IDC_CHECK_OTHER_LANGUAGES       1068
+#define IDC_CHECK_BLACKLIST_APPS         1069
+#define IDC_BUTTON_BLACKLIST_CONFIG      1070
+#define IDS_STRING_BLACKLIST_APPS       1071
+
+// Blacklist notification resource IDs  
+#define IDS_BLACKLIST_NOTIFICATION_TITLE 1072
+#define IDS_BLACKLIST_NOTIFICATION_MSG   1073
+#define IDS_BLACKLIST_SWITCH_BLOCKED_MSG 1074
+
+// Blacklist dialog IDs
+#define IDD_DIALOG_BLACKLIST             150
+#define IDC_COMBO_RUNNING_APPS           1071
+#define IDC_BUTTON_BROWSE_APP            1072
+#define IDC_LIST_BLACKLIST_APPS          1073
+#define IDC_BUTTON_BLACKLIST_ADD         1074
+#define IDC_BUTTON_BLACKLIST_REMOVE      1075
+#define IDC_BUTTON_BLACKLIST_CLOSE       1076
+
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -191,7 +209,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        149
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1052
+#define _APS_NEXT_CONTROL_VALUE         1077
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

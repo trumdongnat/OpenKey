@@ -166,6 +166,7 @@
     <ClInclude Include="AboutDialog.h" />
     <ClInclude Include="AppDelegate.h" />
     <ClInclude Include="BaseDialog.h" />
+    <ClInclude Include="BlacklistDialog.h" />
     <ClInclude Include="ConvertToolDialog.h" />
     <ClInclude Include="MacroDialog.h" />
     <ClInclude Include="MainControlDialog.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="AboutDialog.cpp" />
     <ClCompile Include="AppDelegate.cpp" />
     <ClCompile Include="BaseDialog.cpp" />
+    <ClCompile Include="BlacklistDialog.cpp" />
     <ClCompile Include="ConvertToolDialog.cpp" />
     <ClCompile Include="MacroDialog.cpp" />
     <ClCompile Include="main.cpp" />

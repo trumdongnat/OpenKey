@@ -364,3 +364,17 @@ void SystemTrayHelper::createSystemTrayIcon(const HINSTANCE& hIns) {
 void SystemTrayHelper::removeSystemTray() {
 	Shell_NotifyIcon(NIM_DELETE, &nid);
 }
+
+void SystemTrayHelper::showBalloonNotification(LPCTSTR title, LPCTSTR message, DWORD icon) {
+	// Set up the balloon notification
+	nid.uFlags |= NIF_INFO;
+	nid.dwInfoFlags = icon;
+	_tcscpy_s(nid.szInfoTitle, sizeof(nid.szInfoTitle) / sizeof(TCHAR), title);
+	_tcscpy_s(nid.szInfo, sizeof(nid.szInfo) / sizeof(TCHAR), message);
+	
+	// Show the balloon notification
+	Shell_NotifyIcon(NIM_MODIFY, &nid);
+	
+	// Reset the info flags to remove the balloon
+	nid.uFlags &= ~NIF_INFO;
+}
