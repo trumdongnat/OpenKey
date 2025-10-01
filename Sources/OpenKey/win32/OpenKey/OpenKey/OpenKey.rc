@@ -259,8 +259,8 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,89,119,10
     CONTROL         "Chạy với quyền Admin",IDC_CHECK_RUN_AS_ADMIN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,31,119,10
     CONTROL         "Kiểm tra bản mới lúc khởi động",IDC_CHECK_CHECK_UPDATE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,70,119,10
-    PUSHBUTTON      "Kiểm tra bản mới...",IDC_BUTTON_CHECK_UPDATE,151,88,75,14
+                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,151,70,119,10
+    PUSHBUTTON      "Kiểm tra bản mới...",IDC_BUTTON_CHECK_UPDATE,151,88,75,14,NOT WS_VISIBLE | WS_DISABLED
     CONTROL         "Tạo biểu tượng trên Desktop",IDC_CHECK_CHECK_CREATE_SHORTCUT,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,31,119,10
     CONTROL         "Sửa lỗi trên Chromium (beta)",IDC_CHECK_FIX_CHROMIUM,
