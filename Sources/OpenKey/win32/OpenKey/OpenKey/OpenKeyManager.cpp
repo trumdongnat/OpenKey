@@ -32,6 +32,7 @@ static vector<LPCTSTR> _tableCode = {
 
 extern void OpenKeyInit();
 extern void OpenKeyFree();
+extern void resetKeyboardHooks();
 
 unsigned short  OpenKeyManager::_lastKeyCode = 0;
 
@@ -49,6 +50,10 @@ void OpenKeyManager::initEngine() {
 
 void OpenKeyManager::freeEngine() {
 	OpenKeyFree();
+}
+
+void OpenKeyManager::resetKeyboardHooks() {
+	::resetKeyboardHooks(); // Gọi global function thay vì gọi chính nó
 }
 
 bool OpenKeyManager::checkUpdate(string& newVersion) {

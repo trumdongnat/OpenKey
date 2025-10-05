@@ -12,6 +12,7 @@ You can fork, modify, improve this program. If you
 redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "AppDelegate.h"
+#include "OpenKeyManager.h"
 
 static AppDelegate* _instance;
 
@@ -214,6 +215,9 @@ void AppDelegate::onToggleVietnamese() {
 	if (mainDialog) {
 		mainDialog->fillData();
 	}
+	
+	// Reset keyboard hooks when manually switching language to ensure hotkey detection works
+	OpenKeyManager::resetKeyboardHooks();
 	
 	if (vUseSmartSwitchKey) {
 		string& exe = OpenKeyHelper::getLastAppExecuteName();

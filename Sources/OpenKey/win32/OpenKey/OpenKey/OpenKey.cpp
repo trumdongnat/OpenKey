@@ -79,6 +79,43 @@ void OpenKeyFree() {
 	UnhookWinEvent(hSystemEvent);
 }
 
+void resetKeyboardHooks() {
+	// Unhook existing hooks
+	if (hKeyboardHook) {
+		UnhookWindowsHookEx(hKeyboardHook);
+		hKeyboardHook = NULL;
+	}
+	if (hMouseHook) {
+		UnhookWindowsHookEx(hMouseHook);
+		hMouseHook = NULL;
+	}
+	if (hSystemEvent) {
+		UnhookWinEvent(hSystemEvent);
+		hSystemEvent = NULL;
+	}
+	
+	// Reset internal state
+	_flag = 0;
+	_lastFlag = 0;
+	_hasJustUsedHotKey = false;
+	_keycode = 0;
+	
+	//get key state
+	if (GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0) _flag |= MASK_SHIFT;
+	if (GetKeyState(VK_LCONTROL) < 0 || GetKeyState(VK_RCONTROL) < 0) _flag |= MASK_CONTROL;
+	if (GetKeyState(VK_LMENU) < 0 || GetKeyState(VK_RMENU) < 0) _flag |= MASK_ALT;
+	if (GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0) _flag |= MASK_WIN;
+	if (GetKeyState(VK_NUMLOCK) < 0) _flag |= MASK_NUMLOCK;
+	if (GetKeyState(VK_CAPITAL) == 1) _flag |= MASK_CAPITAL;
+	if (GetKeyState(VK_SCROLL) < 0) _flag |= MASK_SCROLL;
+	
+	//re-init hook
+	HINSTANCE hInstance = GetModuleHandle(NULL);
+	hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProcess, hInstance, 0);
+	hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mouseHookProcess, hInstance, 0);
+	hSystemEvent = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL, winEventProcCallback, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+}
+
 void OpenKeyInit() {
 	APP_GET_DATA(vLanguage, 1);
 	APP_GET_DATA(vInputType, 0);
@@ -427,6 +464,10 @@ void switchLanguage() {
 		vLanguage = 0;
 	if (HAS_BEEP(vSwitchKeyStatus))
 		MessageBeep(MB_OK);
+	
+	// Reset keyboard hooks to ensure hotkey detection works properly
+	resetKeyboardHooks();
+	
 	AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
 	if (vUseSmartSwitchKey) {
 		setAppInputMethodStatus(OpenKeyHelper::getFrontMostAppExecuteName(), vLanguage | (vCodeTable << 1));

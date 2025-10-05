@@ -22,6 +22,7 @@ public:
 
 	static void initEngine();
 	static void freeEngine();
+	static void resetKeyboardHooks(); // Function to reset keyboard hooks
 
 	static bool checkUpdate(string& newVersion);
 
