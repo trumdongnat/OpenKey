@@ -54,6 +54,9 @@ private:
     void removeAppFromBlacklist(const string& appName);
     string getBlacklistFilePath();
     
+    // Helper function to check if a process has GUI windows
+    bool hasGUIWindows(DWORD processId);
+    
     // Window selection methods
     void startWindowSelection();
     void endWindowSelection();

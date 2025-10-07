@@ -27,6 +27,49 @@ using namespace std;
 set<string> BlacklistDialog::s_blacklistApps;
 BlacklistDialog* BlacklistDialog::s_instance = nullptr;
 
+// Helper structure for EnumWindows callback
+struct ProcessWindowInfo {
+    DWORD processId;
+    bool hasVisibleWindow;
+};
+
+// Callback function to check if a process has visible windows
+BOOL CALLBACK CheckProcessWindowsProc(HWND hwnd, LPARAM lParam) {
+    ProcessWindowInfo* pInfo = reinterpret_cast<ProcessWindowInfo*>(lParam);
+    
+    DWORD windowProcessId;
+    GetWindowThreadProcessId(hwnd, &windowProcessId);
+    
+    if (windowProcessId == pInfo->processId && IsWindowVisible(hwnd)) {
+        // Check if it's a real window (not just a hidden system window)
+        LONG style = GetWindowLong(hwnd, GWL_STYLE);
+        if (style & WS_VISIBLE) {
+            // Additional check: window should have a title or be a main window
+            TCHAR windowTitle[256];
+            GetWindowText(hwnd, windowTitle, 256);
+            
+            // Check if it's a top-level window with some visible characteristics
+            if (GetParent(hwnd) == NULL && (wcslen(windowTitle) > 0 || (style & WS_OVERLAPPEDWINDOW))) {
+                pInfo->hasVisibleWindow = true;
+                return FALSE; // Stop enumeration, we found a visible window
+            }
+        }
+    }
+    
+    return TRUE; // Continue enumeration
+}
+
+// Helper function to check if a process has GUI windows
+bool BlacklistDialog::hasGUIWindows(DWORD processId) {
+    ProcessWindowInfo info;
+    info.processId = processId;
+    info.hasVisibleWindow = false;
+    
+    EnumWindows(CheckProcessWindowsProc, reinterpret_cast<LPARAM>(&info));
+    
+    return info.hasVisibleWindow;
+}
+
 BlacklistDialog::BlacklistDialog(const HINSTANCE& hInstance, const int& resourceId)
     : BaseDialog(hInstance, resourceId), isSelectingWindow(false), originalCursor(nullptr), hOverlayWindow(nullptr) {
     s_instance = this;
@@ -149,8 +192,19 @@ void BlacklistDialog::populateRunningApps() {
             
             transform(exeName.begin(), exeName.end(), exeName.begin(), ::toupper);
             
+            // Filter out system processes and check for GUI windows
             if (uniqueApps.find(exeName) == uniqueApps.end() && 
-                exeName != "SYSTEM" && exeName != "EXPLORER.EXE") {
+                exeName != "SYSTEM" && 
+                exeName != "EXPLORER.EXE" &&
+                exeName != "WINLOGON.EXE" &&
+                exeName != "CSRSS.EXE" &&
+                exeName != "SMSS.EXE" &&
+                exeName != "WININIT.EXE" &&
+                exeName != "SERVICES.EXE" &&
+                exeName != "LSASS.EXE" &&
+                exeName != "SVCHOST.EXE" &&
+                hasGUIWindows(pe32.th32ProcessID)) {
+                
                 uniqueApps.insert(exeName);
                 runningApps.push_back(exeName);
             }
