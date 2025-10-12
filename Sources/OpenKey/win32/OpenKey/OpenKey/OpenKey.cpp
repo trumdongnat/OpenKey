@@ -66,6 +66,10 @@ static vector<Byte> savedSmartSwitchKeyData; ////use for smart switch key
 
 static bool _hasJustUsedHotKey = false;
 
+// Variables to track language state before blacklisted app
+static int _languageBeforeBlacklist = -1; // -1 means no saved state
+static bool _wasInBlacklistedApp = false;
+
 static INPUT backspaceEvent[2];
 static INPUT keyEvent[2];
 
@@ -99,6 +103,10 @@ void resetKeyboardHooks() {
 	_lastFlag = 0;
 	_hasJustUsedHotKey = false;
 	_keycode = 0;
+	
+	// Reset blacklist language tracking
+	_languageBeforeBlacklist = -1;
+	_wasInBlacklistedApp = false;
 	
 	//get key state
 	if (GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0) _flag |= MASK_SHIFT;
@@ -150,6 +158,10 @@ void OpenKeyInit() {
 	APP_GET_DATA(vTempOffOpenKey, 0);
 	APP_GET_DATA(vFixChromiumBrowser, 0);
 	APP_GET_DATA(vUseBlacklistApps, 0);
+
+	// Initialize blacklist language tracking variables
+	_languageBeforeBlacklist = -1;
+	_wasInBlacklistedApp = false;
 
 	//init convert tool
 	APP_GET_DATA(convertToolDontAlertWhenCompleted, 0);
@@ -462,6 +474,13 @@ void switchLanguage() {
 		vLanguage = 1;
 	else
 		vLanguage = 0;
+	
+	// Reset blacklist language tracking when user manually switches
+	if (vUseBlacklistApps) {
+		_languageBeforeBlacklist = -1;
+		_wasInBlacklistedApp = false;
+	}
+	
 	if (HAS_BEEP(vSwitchKeyStatus))
 		MessageBeep(MB_OK);
 	
@@ -741,34 +760,66 @@ VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, H
 		if (exe.compare("explorer.exe") == 0) //dont apply with windows explorer
 			return;
 		
+		bool isCurrentAppBlacklisted = false;
+		
 		// Check blacklist first (higher priority than smart switch)
-		if (vUseBlacklistApps && BlacklistDialog::isAppBlacklisted(exe)) {
-			if (vLanguage != 0) {
-				vLanguage = 0; // Switch to English mode
-				AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+		if (vUseBlacklistApps) {
+			isCurrentAppBlacklisted = BlacklistDialog::isAppBlacklisted(exe);
+			
+			if (isCurrentAppBlacklisted) {
+				// Entering a blacklisted app
+				if (!_wasInBlacklistedApp) {
+					// Save current language state if not already saved
+					if (_languageBeforeBlacklist == -1) {
+						_languageBeforeBlacklist = vLanguage;
+					}
+					_wasInBlacklistedApp = true;
+				}
+				
+				// Switch to English mode if not already
+				if (vLanguage != 0) {
+					vLanguage = 0;
+					AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+				}
+			} else {
+				// Not in a blacklisted app
+				if (_wasInBlacklistedApp) {
+					// We were in a blacklisted app before, now restore language
+					if (_languageBeforeBlacklist != -1 && _languageBeforeBlacklist != vLanguage) {
+						vLanguage = _languageBeforeBlacklist;
+						AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+					}
+					// Reset the saved state
+					_languageBeforeBlacklist = -1;
+					_wasInBlacklistedApp = false;
+				}
 			}
-			startNewSession();
-			return;
 		}
 		
-		_languageTemp = getAppInputMethodStatus(exe, vLanguage | (vCodeTable << 1));
-		vTempOffEngine(false);
-		if (vUseSmartSwitchKey && (_languageTemp & 0x01) != vLanguage) {
-			if (_languageTemp != -1) {
-				vLanguage = _languageTemp;
-				AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
-			} else {
-				saveSmartSwitchKeyData();
+		// Only proceed with smart switch if not in blacklisted app
+		if (!isCurrentAppBlacklisted) {
+			_languageTemp = getAppInputMethodStatus(exe, vLanguage | (vCodeTable << 1));
+			vTempOffEngine(false);
+			if (vUseSmartSwitchKey && (_languageTemp & 0x01) != vLanguage) {
+				if (_languageTemp != -1) {
+					vLanguage = _languageTemp;
+					AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+				} else {
+					saveSmartSwitchKeyData();
+				}
+			}
+			
+			if (vRememberCode && (_languageTemp >> 1) != vCodeTable) { //for remember table code feature
+				if (_languageTemp != -1) {
+					AppDelegate::getInstance()->onTableCode(_languageTemp >> 1);
+				} else {
+					saveSmartSwitchKeyData();
+				}
 			}
 		}
+		
 		startNewSession();
-		if (vRememberCode && (_languageTemp >> 1) != vCodeTable) { //for remember table code feature
-			if (_languageTemp != -1) {
-				AppDelegate::getInstance()->onTableCode(_languageTemp >> 1);
-			} else {
-				saveSmartSwitchKeyData();
-			}
-		}
+		
 		if (vSupportMetroApp && exe.compare("ApplicationFrameHost.exe") == 0) {//Metro App
 			SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
 			SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
