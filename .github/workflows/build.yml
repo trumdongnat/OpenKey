@@ -1,0 +1,102 @@
+name: Build and Release OpenKey
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes'
+        required: false
+        type: string
+        default: 'Release build for OpenKey'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .\Sources\OpenKey\win32\OpenKey
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Build x86
+      run: |
+        msbuild -m -target:Rebuild -p:Configuration=Release -p:Platform=x86 -p:OutDir="./Release/x86/" -p:IntDir="./Release/x86/" ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build x64
+      run: |
+        msbuild -m -target:Rebuild -p:Configuration=Release -p:Platform=x64 -p:OutDir="./Release/x64/" -p:IntDir="./Release/x64/" ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Prepare Release Assets
+      run: |
+        # Create target directories for both platforms
+        New-Item -Path "ReleaseAssets/OpenKey-x86" -ItemType Directory -Force
+        New-Item -Path "ReleaseAssets/OpenKey-x64" -ItemType Directory -Force
+        
+        # Copy x86 OpenKey and OpenKeyUpdate exes
+        Copy-Item -Path "Sources/OpenKey/win32/OpenKey/OpenKey/Release/x86/*.exe" -Destination "ReleaseAssets/OpenKey-x86/" -Force
+        Copy-Item -Path "Sources/OpenKey/win32/OpenKey/OpenKeyUpdate/Release/x86/*.exe" -Destination "ReleaseAssets/OpenKey-x86/" -Force
+        
+        # Copy x64 OpenKey and OpenKeyUpdate exes
+        Copy-Item -Path "Sources/OpenKey/win32/OpenKey/OpenKey/Release/x64/*.exe" -Destination "ReleaseAssets/OpenKey-x64/" -Force
+        Copy-Item -Path "Sources/OpenKey/win32/OpenKey/OpenKeyUpdate/Release/x64/*.exe" -Destination "ReleaseAssets/OpenKey-x64/" -Force
+        
+        # Create ZIP files for each platform
+        Compress-Archive -Path "ReleaseAssets/OpenKey-x86/*" -DestinationPath "OpenKey-x86.zip" -Force
+        Compress-Archive -Path "ReleaseAssets/OpenKey-x64/*" -DestinationPath "OpenKey-x64.zip" -Force
+        
+        # List files in the target directories to verify
+        Write-Host "x86 files:"
+        Get-ChildItem -Path "ReleaseAssets/OpenKey-x86"
+        Write-Host "x64 files:"
+        Get-ChildItem -Path "ReleaseAssets/OpenKey-x64"
+        Write-Host "ZIP files created:"
+        Get-ChildItem -Path "*.zip"
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $args = @(
+          "release", "create", "${{ inputs.tag_name }}",
+          "--title", "${{ inputs.release_name }}",
+          "--notes", "${{ inputs.release_notes }}",
+          "OpenKey-x86.zip",
+          "OpenKey-x64.zip"
+        )
+        if ("${{ inputs.prerelease }}" -eq "true") {
+          $args += "--prerelease"
+        }
+        & gh @args
+
+    - name: Generate artifact attestation for x86
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: ./OpenKey-x86.zip
+
+    - name: Generate artifact attestation for x64
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: ./OpenKey-x64.zip
