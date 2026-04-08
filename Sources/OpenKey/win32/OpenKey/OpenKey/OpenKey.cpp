@@ -97,26 +97,27 @@ void resetKeyboardHooks() {
 		UnhookWinEvent(hSystemEvent);
 		hSystemEvent = NULL;
 	}
-	
+
 	// Reset internal state
 	_flag = 0;
 	_lastFlag = 0;
 	_hasJustUsedHotKey = false;
 	_keycode = 0;
-	
+
 	// Reset blacklist language tracking
 	_languageBeforeBlacklist = -1;
 	_wasInBlacklistedApp = false;
-	
+
 	//get key state
 	if (GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0) _flag |= MASK_SHIFT;
 	if (GetKeyState(VK_LCONTROL) < 0 || GetKeyState(VK_RCONTROL) < 0) _flag |= MASK_CONTROL;
 	if (GetKeyState(VK_LMENU) < 0 || GetKeyState(VK_RMENU) < 0) _flag |= MASK_ALT;
-	if (GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0) _flag |= MASK_WIN;
+	// Don't check Win key state after unlock as it can be stuck/invalid
+	//if (GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0) _flag |= MASK_WIN;
 	if (GetKeyState(VK_NUMLOCK) < 0) _flag |= MASK_NUMLOCK;
 	if (GetKeyState(VK_CAPITAL) == 1) _flag |= MASK_CAPITAL;
 	if (GetKeyState(VK_SCROLL) < 0) _flag |= MASK_SCROLL;
-	
+
 	//re-init hook
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 	hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProcess, hInstance, 0);
@@ -449,7 +450,7 @@ bool checkHotKey(int hotKeyData, bool checkKeyCode = true) {
 	if (checkKeyCode) {
 		if (GET_SWITCH_KEY(hotKeyData) != _keycode)
 			return false;
-	}
+		}
 	return true;
 }
 
@@ -590,6 +591,13 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
 		//LOG(L"Key down: %d\n", keyboardData->vkCode);
 		SetModifierMask((Uint16)keyboardData->vkCode);
+
+		// Detect Win+L to proactively reset hooks before system destroys them
+		// VK_L is 0x4C (76 in decimal)
+		if (keyboardData->vkCode == 0x4C && (_flag & MASK_WIN)) {
+			resetKeyboardHooks();
+			return -1; // Consume the event
+		}
 	} else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
 		//LOG(L"Key up: %d\n", keyboardData->vkCode);
 		UnsetModifierMask((Uint16)keyboardData->vkCode);
