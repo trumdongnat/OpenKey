@@ -595,7 +595,7 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 		// Detect Win+L to proactively reset hooks before system destroys them
 		// VK_L is 0x4C (76 in decimal)
 		if (keyboardData->vkCode == 0x4C && (_flag & MASK_WIN)) {
-			resetKeyboardHooks();
+			_flag = 0;
 			return -1; // Consume the event
 		}
 	} else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
